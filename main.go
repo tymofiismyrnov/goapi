@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"net/http"
-
 	"github.com/gin-gonic/gin"
 )
 
@@ -59,7 +58,7 @@ func bookById(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, book)
 }
 
-func checkoutBook(c *gin.Context) {
+func patchBook(c *gin.Context, action string) {
 	id, ok := c.GetQuery("id")
 	if !ok {
 		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "missing 'id' query parameter"})
@@ -72,30 +71,27 @@ func checkoutBook(c *gin.Context) {
 		return
 	}
 
-	if book.Quantity <= 0 {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "book not available"})
+	switch action {
+	case "checkout":
+		if book.Quantity <= 0 {
+			c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "book not available"})
+			return
+		}
+		book.Quantity -= 1
+		c.IndentedJSON(http.StatusOK, book)
+	case "return":
+		book.Quantity += 1
+		c.IndentedJSON(http.StatusOK, book)
 	}
-
-	book.Quantity -= 1
-	c.IndentedJSON(http.StatusOK, book)
 
 }
 
+func checkoutBook(c *gin.Context) {
+	patchBook(c, "checkout")
+}
+
 func returnBook(c *gin.Context) {
-	id, ok := c.GetQuery("id")
-	if !ok {
-		c.IndentedJSON(http.StatusBadRequest, gin.H{"message": "missing 'id' query parameter"})
-		return
-	}
-
-	book, err := getBookById(id)
-	if err != nil {
-		c.IndentedJSON(http.StatusNotFound, gin.H{"message": "book not found"})
-		return
-	}
-
-	book.Quantity += 1
-	c.IndentedJSON(http.StatusOK, book)
+	patchBook(c, "return")
 }
 
 func main() {
